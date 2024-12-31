@@ -64,3 +64,82 @@ unacceptable behavior to hello@swiftwasm.org.
 <a href="https://www.emergetools.com/">
   <img src="https://github.com/swiftwasm/swift/raw/swiftwasm-distribution/assets/sponsors/emergetools.png" width="30%">
 </a>
+
+import SwiftUI
+import WebKit
+
+struct WebView: UIViewRepresentable {
+    let urlString: String
+    
+    func makeUIView(context: Context) -> WKWebView {
+        let webView = WKWebView()
+        
+        // Enable zoom by adjusting the viewport meta tag
+        webView.scrollView.isScrollEnabled = true
+        webView.scrollView.minimumZoomScale = 1.0
+        webView.scrollView.maximumZoomScale = 5.0
+        
+        // Set custom user agent for mobile view
+        webView.customUserAgent = "Mozilla/5.0 (iPhone; CPU iPhone OS 15_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.0 Mobile/15E148 Safari/604.1"
+        
+        // Automatically fit the content to the screen size
+        webView.translatesAutoresizingMaskIntoConstraints = false
+        
+        webView.navigationDelegate = context.coordinator
+        return webView
+    }
+    
+    func updateUIView(_ uiView: WKWebView, context: Context) {
+        if let url = URL(string: urlString) {
+            let request = URLRequest(url: url)
+            uiView.load(request)
+        }
+    }
+    
+    func makeCoordinator() -> Coordinator {
+        Coordinator()
+    }
+    
+    class Coordinator: NSObject, WKNavigationDelegate {
+        func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+            // Inject JavaScript to center, enable zooming, and set the background color
+            let centerAndZoomScript = """
+            var meta = document.createElement('meta');
+            meta.name = 'viewport';
+            // Set the initial scale to a larger value for bigger screens
+            meta.content = 'width=device-width, initial-scale=1.5, maximum-scale=5.0, user-scalable=yes';
+            document.head.appendChild(meta);
+            
+            var style = document.createElement('style');
+            style.innerHTML = `
+                body {
+                    display: flex;
+                    justify-content: center;
+                    align-items: center;
+                    min-height: 100vh;
+                    margin: 0;
+                    overflow: hidden;
+                    background-color: #5C6971; /* Set background color */
+                }
+                iframe {
+                    width: 100%;
+                    height: 100%;
+                    max-width: 100%;
+                    max-height: 100%;
+                    border: none;
+                }
+            `;
+            document.head.appendChild(style);
+            """
+            webView.evaluateJavaScript(centerAndZoomScript, completionHandler: nil)
+        }
+    }
+}
+
+struct ContentView: View {
+    var body: some View {
+        WebView(urlString: "https://studio.code.org/projects/applab/VCfQUyYFcy6lCOfDntzsg_Ti7q8qQ86iSjYq_3G5GFx/embed?nosource")
+            .edgesIgnoringSafeArea(.all)
+            .frame(maxWidth: .infinity, maxHeight: .infinity) // Ensure it fills the screen
+    }
+}
